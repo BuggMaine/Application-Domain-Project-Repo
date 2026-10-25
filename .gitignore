@@ -6,6 +6,9 @@ __pycache__/
 .venv/
 venv/
 env/
+frontend/bin/
+frontend/lib/
+frontend/pyvenv.cfg
 
 # Environments / secrets
 .env
