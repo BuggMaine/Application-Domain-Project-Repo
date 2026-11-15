@@ -65,17 +65,18 @@ def shop(app, query=""):
     panel = ft.Container(visible=False, content=t.card(ft.Column(spacing=12, controls=[
         t.heading("Filters"), author, publisher, t.label("Price", 14, t.MUTED), chips]), padding=16))
 
-    def refresh(e=None):
-        st["author"], st["publisher"] = author.value or "", publisher.value or ""
-        found = data.filter_products(search.value or "", st["author"], st["publisher"], st["price"])
+    def build_results(found):
         count.value = f"{len(found)} item" + ("" if len(found) == 1 else "s")
         if found:
-            results.controls = [t.item_row(p, on_click=lambda e, p=p: app.show_item(p)) for p in found]
-        else:
-            results.controls = [ft.Container(padding=ft.Padding.symmetric(vertical=32), alignment=ft.Alignment.CENTER, content=ft.Column(
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8, controls=[
-                    t.heading("No results found"), t.label("Try a different title, author, or publisher, or clear your filters.", 14, align=ft.TextAlign.CENTER),
-                    ft.Container(width=200, content=t.button("Clear Filters", on_click=clear, kind="secondary"))]))]
+            return [t.item_row(p, on_click=lambda e, p=p: app.show_item(p)) for p in found]
+        return [ft.Container(padding=ft.Padding.symmetric(vertical=32), alignment=ft.Alignment.CENTER, content=ft.Column(
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8, controls=[
+                t.heading("No results found"), t.label("Try a different title, author, or publisher, or clear your filters.", 14, align=ft.TextAlign.CENTER),
+                ft.Container(width=200, content=t.button("Clear Filters", on_click=clear, kind="secondary"))]))]
+
+    def refresh(e=None):
+        st["author"], st["publisher"] = author.value or "", publisher.value or ""
+        results.controls = build_results(data.filter_products(search.value or "", st["author"], st["publisher"], st["price"]))
         app.page.update()
 
     def pick(price):
@@ -102,11 +103,7 @@ def shop(app, query=""):
         heading_("All Items"), search,
         ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER, controls=[count, filters_btn]),
         panel, results])
-    found = data.filter_products(query)
-    count.value = f"{len(found)} item" + ("" if len(found) == 1 else "s")
-    results.controls = [t.item_row(p, on_click=lambda e, p=p: app.show_item(p)) for p in found] if found else []
-    if not found:
-        refresh.__call__ if False else None
+    results.controls = build_results(data.filter_products(query))
     return page
 
 
@@ -254,7 +251,7 @@ def order_history(app):
         lines = [ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[t.label("Item", 12, t.MUTED), t.label("Qty", 12, t.MUTED)])]
         lines += [ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[t.label(data.BY_ID[pid]["title"], 14), t.label(f"× {q}", 14)]) for pid, q in o["items"]]
         controls.append(t.card(ft.Column(spacing=8, controls=[
-            ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[t.label(f"Order #{o['number']}", 16), ft.Text(o["total"], size=20, weight=ft.FontWeight.BOLD, color=t.RED)]),
+            ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[t.label(f"Order #{o['number']}", 16), ft.Text(o.get("total") or data.order_total(o["items"]), size=20, weight=ft.FontWeight.BOLD, color=t.RED)]),
             t.label(o["date"], 12, t.MUTED), ft.Column(spacing=4, controls=lines),
             t.button("Reorder", on_click=lambda e, o=o: app.reorder(o), kind="accent")]), padding=16))
     return t.screen(app, controls)
